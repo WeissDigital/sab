@@ -1,253 +1,165 @@
---[[
-	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
--- made by fedoratum.
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
--- Gui to Lua
--- Version: 3.2
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
 
--- Instances:
+-- Variables
+local shiftLockEnabled = false
+local isLocked = false
+local isSmall = false
+local clickCount = 0
+local clickingThread = nil
+local holding = false
+local dragStartedPos = nil
+local isDraggingSomething = false
 
-local ShiftlockStarterGui = Instance.new("ScreenGui")
-local ImageButton = Instance.new("ImageButton")
+-- ВАШ ID КАРТИНКИ
+local SHIFTLOCK_IMAGE = "rbxassetid://11783958319"
 
---Properties:
+-- UI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AdvancedMobileShiftLock"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
-ShiftlockStarterGui.Name = "Shiftlock (StarterGui)"
-ShiftlockStarterGui.Parent = game.CoreGui
-ShiftlockStarterGui.ZIndexBehavior =  Enum.ZIndexBehavior.Sibling
-ShiftlockStarterGui.ResetOnSpawn = false
+-- ИЗМЕНЕНО: Теперь это ImageButton вместо TextButton
+local mainButton = Instance.new("ImageButton")
+mainButton.Size = UDim2.new(0, 60, 0, 60)
+mainButton.Position = UDim2.new(0.8, 0, 0.5, 0)
+mainButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mainButton.BackgroundTransparency = 0.4
+mainButton.Image = SHIFTLOCK_IMAGE -- ИЗМЕНЕНО: Установка вашей картинки
+mainButton.AutoButtonColor = false
+mainButton.Parent = screenGui
 
-ImageButton.Parent = ShiftlockStarterGui
-ImageButton.Active = true
-ImageButton.Draggable = true
-ImageButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ImageButton.BackgroundTransparency = 1.000
-ImageButton.Position = UDim2.new(0.921914339, 0, 0.552375436, 0)
-ImageButton.Size = UDim2.new(0.0636147112, 0, 0.0661305636, 0)
-ImageButton.SizeConstraint = Enum.SizeConstraint.RelativeXX
-ImageButton.Image = "rbxassetid://11783958319" -- ИЗМЕНЕНО: Стартовое фото
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(1, 0)
+uiCorner.Parent = mainButton
 
--- Scripts:
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Thickness = 2
+uiStroke.Color = Color3.fromRGB(255, 255, 255)
+uiStroke.Transparency = 0.5
+uiStroke.Parent = mainButton
 
-local function TLQOYN_fake_script() -- ImageButton.ShiftGUI 
-	local script = Instance.new('LocalScript', ImageButton)
-
-	local MobileCameraFramework = {}
-	local players = game:GetService("Players")
-	local runservice = game:GetService("RunService")
-	local CAS = game:GetService("ContextActionService")
-	local player = players.LocalPlayer
-	local character = player.Character or player.CharacterAdded:Wait()
-	local root = character:WaitForChild("HumanoidRootPart")
-	local humanoid = character.Humanoid
-	local camera = workspace.CurrentCamera
-	local button = script.Parent
+-- ShiftLock Logic
+local function updateShiftLock()
+	if not player.Character or not player.Character:FindFirstChild("Humanoid") then return end
+	local humanoid = player.Character.Humanoid
 	
-	--Visiblity
-	uis = game:GetService("UserInputService")
-	ismobile = uis.TouchEnabled
-	button.Visible = ismobile
-	
-	local states = {
-		OFF = "rbxassetid://11783958319", -- ИЗМЕНЕНО: Фото при выключенном шифтлоке
-		ON = "rbxassetid://11783958319"   -- ИЗМЕНЕНО: Фото при включенном шифтлоке
-	}
-	local MAX_LENGTH = 900000
-	local active = false
-	local ENABLED_OFFSET = CFrame.new(1.7, 0, 0)
-	local DISABLED_OFFSET = CFrame.new(-1.7, 0, 0)
-local rootPos = Vector3.new(0,0,0)
-local function UpdatePos()
-if player.Character and player.Character:FindFirstChildOfClass"Humanoid" and player.Character:FindFirstChildOfClass"Humanoid".RootPart then
-rootPos = player.Character:FindFirstChildOfClass"Humanoid".RootPart.Position
-end
-end
-	local function UpdateImage(STATE)
-		button.Image = states[STATE]
+	if shiftLockEnabled then
+		-- ИЗМЕНЕНО: Убраны эмодзи замков. 
+		-- Если хотите, чтобы при включении картинка становилась чуть прозрачнее (визуальный отклик):
+		mainButton.ImageTransparency = 0.0
+		humanoid.CameraOffset = Vector3.new(1.7, 0.5, 0)
+		humanoid.AutoRotate = false
+	else
+		mainButton.ImageTransparency = 0.4 -- В выключенном состоянии кнопка слегка тускнеет
+		humanoid.CameraOffset = Vector3.new(0, 0, 0)
+		humanoid.AutoRotate = true
 	end
-	local function UpdateAutoRotate(BOOL)
-if player.Character and player.Character:FindFirstChildOfClass"Humanoid" then
-player.Character:FindFirstChildOfClass"Humanoid".AutoRotate = BOOL
 end
-end
-	local function GetUpdatedCameraCFrame()
-if game:GetService"Workspace".CurrentCamera then
-return CFrame.new(rootPos, Vector3.new(game:GetService"Workspace".CurrentCamera.CFrame.LookVector.X * MAX_LENGTH, rootPos.Y, game:GetService"Workspace".CurrentCamera.CFrame.LookVector.Z * MAX_LENGTH))
-end
-end
-	local function EnableShiftlock()
-UpdatePos()
-		UpdateAutoRotate(false)
-		UpdateImage("ON")
-if player.Character and player.Character:FindFirstChildOfClass"Humanoid" and player.Character:FindFirstChildOfClass"Humanoid".RootPart then
-player.Character:FindFirstChildOfClass"Humanoid".RootPart.CFrame = GetUpdatedCameraCFrame()
-end
-if game:GetService"Workspace".CurrentCamera then
-game:GetService"Workspace".CurrentCamera.CFrame = camera.CFrame * ENABLED_OFFSET
-end
+
+RunService.RenderStepped:Connect(function()
+	if shiftLockEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+		local _, y = camera.CFrame:ToEulerAnglesYXZ()
+		player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position) * CFrame.Angles(0, y, 0)
 	end
-	local function DisableShiftlock()
-UpdatePos()
-		UpdateAutoRotate(true)
-		UpdateImage("OFF")
-		if game:GetService"Workspace".CurrentCamera then
-game:GetService"Workspace".CurrentCamera.CFrame = camera.CFrame * DISABLED_OFFSET
+end)
+
+-- Multi-Tap Handler (The Brain)
+local function handleClicks()
+	if clickCount == 1 then
+		-- Одиночное нажатие: Вкл/Выкл
+		shiftLockEnabled = not shiftLockEnabled
+		updateShiftLock()
+	elseif clickCount == 2 then
+		-- Двойное нажатие: Размер (только если не заблокировано)
+		if not isLocked then
+			isSmall = not isSmall
+			mainButton.Size = isSmall and UDim2.new(0, 40, 0, 40) or UDim2.new(0, 60, 0, 60)
+			-- ИЗМЕНЕНО: Строка с размером текста TextSize удалена, так как текста больше нет
+		end
+	elseif clickCount >= 3 then
+		-- Тройное нажатие: Удаление (только если не заблокировано)
+		if not isLocked then
+			screenGui:Destroy()
+		end
+	end
+	clickCount = 0
+	clickingThread = nil
 end
-		pcall(function()
-			active:Disconnect()
-			active = nil
+
+-- Dragging Logic
+local dragging, dragStart, startPos
+mainButton.InputBegan:Connect(function(input)
+	if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isLocked then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainButton.Position
+		dragStartedPos = input.Position
+		isDraggingSomething = false
+	end
+end)
+
+mainButton.InputChanged:Connect(function(input)
+	if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+		local delta = input.Position - dragStart
+		-- Если сдвинули палец больше чем на 5 пикселей, считаем это перетаскиванием
+		if delta.Magnitude > 5 then
+			isDraggingSomething = true
+			mainButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end
+end)
+
+-- Main Input Handler
+mainButton.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		holding = true
+		local currentHoldTime = 0
+		
+		-- Логика зажатия (3 секунды)
+		task.spawn(function()
+			while holding do
+				task.wait(0.1)
+				currentHoldTime = currentHoldTime + 0.1
+				-- Если начали двигать кнопку, блокировка не сработает
+				if isDraggingSomething then break end
+				
+				if currentHoldTime >= 3 then
+					isLocked = not isLocked
+					mainButton.BackgroundColor3 = isLocked and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(0, 0, 0)
+					holding = false
+					break
+				end
+			end
 		end)
 	end
-	UpdateImage("OFF")
-	active = false
-	function ShiftLock()
-		if not active then
-			active = runservice.RenderStepped:Connect(function()
-				EnableShiftlock()
-			end)
-		else
-			DisableShiftlock()
-		end
-	end
-	local ShiftLockButton = CAS:BindAction("ShiftLOCK", ShiftLock, false, "On")
-	CAS:SetPosition("ShiftLOCK", UDim2.new(0.8, 0, 0.8, 0))
-	button.MouseButton1Click:Connect(function()
-		if not active then
-			active = runservice.RenderStepped:Connect(function()
-				EnableShiftlock()
-			end)
-		else
-			DisableShiftlock()
-		end
-	end)
-	return MobileCameraFramework
-	
-end
-coroutine.wrap(TLQOYN_fake_script)()
-local function OMQRQRC_fake_script() -- ShiftlockStarterGui.LocalScript 
-	local script = Instance.new('LocalScript', ShiftlockStarterGui)
+end)
 
-	local Players = game:GetService("Players")
-	local UserInputService = game:GetService("UserInputService")
-	local Settings = UserSettings()
-	local GameSettings = Settings.GameSettings
-	local ShiftLockController = {}
-	while not Players.LocalPlayer do
-		wait()
-	end
-	local LocalPlayer = Players.LocalPlayer
-	local Mouse = LocalPlayer:GetMouse()
-	local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-	local ScreenGui, ShiftLockIcon, InputCn
-	local IsShiftLockMode = true
-	local IsShiftLocked = true
-	local IsActionBound = false
-	local IsInFirstPerson = false
-	ShiftLockController.OnShiftLockToggled = Instance.new("BindableEvent")
-	local function isShiftLockMode()
-		return LocalPlayer.DevEnableMouseLock and GameSettings.ControlMode == Enum.ControlMode.MouseLockSwitch and LocalPlayer.DevComputerMovementMode ~= Enum.DevComputerMovementMode.ClickToMove and GameSettings.ComputerMovementMode ~= Enum.ComputerMovementMode.ClickToMove and LocalPlayer.DevComputerMovementMode ~= Enum.DevComputerMovementMode.Scriptable
-	end
-	if not UserInputService.TouchEnabled then
-		IsShiftLockMode = isShiftLockMode()
-	end
-	local function onShiftLockToggled()
-		IsShiftLocked = not IsShiftLocked
-		ShiftLockController.OnShiftLockToggled:Fire()
-	end
-	local initialize = function()
-		print("enabled")
-	end
-	function ShiftLockController:IsShiftLocked()
-		return IsShiftLockMode and IsShiftLocked
-	end
-	function ShiftLockController:SetIsInFirstPerson(isInFirstPerson)
-		IsInFirstPerson = isInFirstPerson
-	end
-	local function mouseLockSwitchFunc(actionName, inputState, inputObject)
-		if IsShiftLockMode then
-			onShiftLockToggled()
-		end
-	end
-	local function disableShiftLock()
-		if ScreenGui then
-			ScreenGui.Parent = nil
-		end
-		IsShiftLockMode = false
-		Mouse.Icon = ""
-		if InputCn then
-			InputCn:disconnect()
-			InputCn = nil
-		end
-		IsActionBound = false
-		ShiftLockController.OnShiftLockToggled:Fire()
-	end
-	local onShiftInputBegan = function(inputObject, isProcessed)
-		if isProcessed then
-			return
-		end
-		if inputObject.UserInputType ~= Enum.UserInputType.Keyboard or inputObject.KeyCode == Enum.KeyCode.LeftShift or inputObject.KeyCode == Enum.KeyCode.RightShift then
-		end
-	end
-	local function enableShiftLock()
-		IsShiftLockMode = isShiftLockMode()
-		if IsShiftLockMode then
-			if ScreenGui then
-				ScreenGui.Parent = PlayerGui
-			end
-			if IsShiftLocked then
-				ShiftLockController.OnShiftLockToggled:Fire()
-			end
-			if not IsActionBound then
-				InputCn = UserInputService.InputBegan:connect(onShiftInputBegan)
-				IsActionBound = true
+mainButton.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+		holding = false
+		
+		-- Если мы не двигали кнопку, обрабатываем клики
+		if not isDraggingSomething then
+			clickCount = clickCount + 1
+			if not clickingThread then
+				clickingThread = task.delay(0.3, handleClicks)
 			end
 		end
+		isDraggingSomething = false
 	end
-	GameSettings.Changed:connect(function(property)
-		if property == "ControlMode" then
-			if GameSettings.ControlMode == Enum.ControlMode.MouseLockSwitch then
-				enableShiftLock()
-			else
-				disableShiftLock()
-			end
-		elseif property == "ComputerMovementMode" then
-			if GameSettings.ComputerMovementMode == Enum.ComputerMovementMode.ClickToMove then
-				disableShiftLock()
-			else
-				enableShiftLock()
-			end
-		end
-	end)
-	LocalPlayer.Changed:connect(function(property)
-		if property == "DevEnableMouseLock" then
-			if LocalPlayer.DevEnableMouseLock then
-				enableShiftLock()
-			else
-				disableShiftLock()
-			end
-		elseif property == "DevComputerMovementMode" then
-			if LocalPlayer.DevComputerMovementMode == Enum.DevComputerMovementMode.ClickToMove or LocalPlayer.DevComputerMovementMode == Enum.DevComputerMovementMode.Scriptable then
-				disableShiftLock()
-			else
-				enableShiftLock()
-			end
-		end
-	end)
-	LocalPlayer.CharacterAdded:connect(function(character)
-		if not UserInputService.TouchEnabled then
-			initialize()
-		end
-	end)
-	if not UserInputService.TouchEnabled then
-		initialize()
-		if isShiftLockMode() then
-			InputCn = UserInputService.InputBegan:connect(onShiftInputBegan)
-			IsActionBound = true
-		end
-	end
-	enableShiftLock()
-	return ShiftLockController
-	
-end
-coroutine.wrap(OMQRQRC_fake_script)()
+end)
+
+-- Character Respawn Support
+player.CharacterAdded:Connect(function(char)
+	task.wait(0.5)
+	updateShiftLock()
+end)
