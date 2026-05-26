@@ -106,7 +106,7 @@ toggle.MouseButton1Click:Connect(function()
 		toggle.BackgroundColor3 = Color3.fromRGB(80,170,255)
 		circle.Position = UDim2.new(1,-18,0.5,-8)
 
-		local target = workspace:FindFirstChild("mimikpofu")
+		local target = workspace:FindFirstChild("CATVALERA90")
 
 		if target then
 			target:Destroy()
